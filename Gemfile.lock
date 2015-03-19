@@ -1,0 +1,66 @@
+PATH
+  remote: .
+  specs:
+    px-timeline-service-client (0.0.1)
+      aws-sdk (~> 2.0)
+      circuit_breaker (~> 1.1)
+      msgpack
+      px-service-client (= 1.0.1)
+      yajl-ruby
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    aasm (4.1.0)
+    activesupport (4.2.0)
+      i18n (~> 0.7)
+      json (~> 1.7, >= 1.7.7)
+      minitest (~> 5.1)
+      thread_safe (~> 0.3, >= 0.3.4)
+      tzinfo (~> 1.1)
+    aws-sdk (2.0.30)
+      aws-sdk-resources (= 2.0.30)
+    aws-sdk-core (2.0.30)
+      builder (~> 3.0)
+      jmespath (~> 1.0)
+      multi_json (~> 1.0)
+      multi_xml (~> 0.5)
+    aws-sdk-resources (2.0.30)
+      aws-sdk-core (= 2.0.30)
+    builder (3.2.2)
+    circuit_breaker (1.1.1)
+      aasm
+    dalli (2.7.3)
+    ethon (0.7.3)
+      ffi (>= 1.3.0)
+    ffi (1.9.8)
+    i18n (0.7.0)
+    jmespath (1.0.2)
+      multi_json (~> 1.0)
+    json (1.8.2)
+    minitest (5.5.1)
+    msgpack (0.5.11)
+    multi_json (1.11.0)
+    multi_xml (0.5.5)
+    px-service-client (1.0.1)
+      activesupport
+      circuit_breaker (~> 1.1)
+      dalli
+      typhoeus
+      will_paginate (~> 3.0)
+    rake (10.4.2)
+    thread_safe (0.3.5)
+    typhoeus (0.7.1)
+      ethon (>= 0.7.1)
+    tzinfo (1.2.2)
+      thread_safe (~> 0.1)
+    will_paginate (3.0.7)
+    yajl-ruby (1.2.1)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  bundler (~> 1.6)
+  px-timeline-service-client!
+  rake
