@@ -1,9 +1,9 @@
-require 'spec_helper'
+require "spec_helper"
 
 describe Px::Service::Kinesis do
-  describe "configure" do
+  describe "config" do
 
-    context "when configure block is given" do
+    context "when config block is given" do
       subject { Px::Service::Kinesis }
       before :each do
         subject.configure do |config|
