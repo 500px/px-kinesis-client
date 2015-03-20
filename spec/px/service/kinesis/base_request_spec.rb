@@ -58,6 +58,10 @@ describe Px::Service::Kinesis::BaseRequest do
         it "returns put rate of 2x the default value" do
           expect(subject.send(:put_rate_decay)).to eq( default_put_rate * 2 )
         end
+
+        it "pushes unsent records back on to the buffer" do
+          expect(subject.instance_variable_get(:@buffer).length).to eq(1)
+        end
       end
 
       context "no throughput limit" do
