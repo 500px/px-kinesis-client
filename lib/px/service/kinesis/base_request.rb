@@ -1,3 +1,4 @@
+require 'pry'
 require 'msgpack'
 require 'aws-sdk'
 require 'yajl'
@@ -12,7 +13,7 @@ module Px::Service::Kinesis
     DEFAULT_PUT_RATE = 0.25
     FLUSH_LENGTH = 200
 
-    attr_accessor = :kinesis
+    attr_accessor :kinesis
 
     # Circuit breaker configuration
     circuit_handler do |handler|
@@ -24,7 +25,6 @@ module Px::Service::Kinesis
     end
 
     def initialize
-      # cheating, do config
       @kinesis = Aws::Kinesis::Client.new(region: Px::Service::Kinesis.config.region)
       # TODO: by default partition key can be combination
       # of hostname and other factors to ensure even
@@ -37,14 +37,40 @@ module Px::Service::Kinesis
       # shards. the consumer can take care of that
 
       @last_send = Time.now
-      @last_throughput_exceeded = -1
+      @last_throughput_exceeded = nil
 
       @jencoder = Yajl::Encoder.new
       @buffer = Array.new
+    end
 
-      # TODO: remove this when done testing or abstract it out
-      #  this is so we don't use the buffer when developing
-      @test = true
+    ##
+    # Check if buffer should be flushed and sent to kinesis
+    #
+    def flush_records(stream)
+      if (put_rate_decay == DEFAULT_PUT_RATE && @buffer.length >= FLUSH_LENGTH) || (Time.now - @last_send > put_rate_decay)
+        response = @kinesis.put_records(:stream_name => stream, :records => @buffer)
+
+        # iterate over response and
+        # back append everything that didn't send
+        #
+        # TODO: detect which shard is being limited
+        # - decay that shard's partition_key
+        # - split shards when we really need to
+
+        tmp_buffer = []
+        if response[:failed_record_count] > 0
+          response[:records].each_with_index do |r, index|
+            if r.error_code == Aws::Kinesis::Errors::ProvisionedThroughputExceededException.code
+              # set last throughput limited value
+              @last_throughput_exceeded = Time.now
+            end
+            tmp_buffer << @buffer[index]
+          end
+        end
+
+        @buffer = tmp_buffer
+        @last_send = Time.now
+      end
     end
 
     ##
@@ -59,30 +85,7 @@ module Px::Service::Kinesis
       @buffer << {data: data_blob, partition_key: Px::Service::Kinesis.config.partition_key}
 
       # check if we should flush the buffer
-      if (put_rate_decay == DEFAULT_PUT_RATE && @buffer.length > FLUSH_LENGTH) || (Time.now - @last_send > put_rate_decay) || @test
-        response = @kinesis.put_records(:stream_name => stream, :records => @buffer)
-
-        # iterate over response and
-        # back append everything that didn't send
-        #
-        # TODO: detect which shard is being limited
-        # - decay that shard's partition_key
-        # - split shards when we really need to
-
-        tmp_buffer = []
-        if response[:failed_record_count] > 0
-          response[:records].each do |index, r|
-            if r[:error_code] == Aws::Kinesis::Errors::ProvisionedThroughputExceededException
-              # set last throughput limited value
-              @last_throughput_exceeded = Time.now
-            end
-            tmp_buffer << @buffer[index]
-          end
-        end
-
-        @buffer = tmp_buffer
-        @last_send = Time.now
-      end
+      flush_records(stream)
 
       return @buffer.length
     end
@@ -102,9 +105,8 @@ module Px::Service::Kinesis
     # tune this function for handling throughput exceptions
     #  decay linearly based on when last throughput failure happend
     def put_rate_decay
-      return DEFAULT_PUT_RATE unless @last_throughput_exceeded != -1
-
-      DEFAULT_PUT_RATE * (1 + (10 / (Time.now - @last_throughput_exceeded)))
+      return DEFAULT_PUT_RATE unless @last_throughput_exceeded && (Time.now - @last_throughput_exceeded) < 10
+      DEFAULT_PUT_RATE * (2 - ((Time.now - @last_throughput_exceeded) / 10))
     end
 
   end

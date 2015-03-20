@@ -27,6 +27,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rake"
   spec.add_development_dependency "rspec"
   spec.add_development_dependency "pry-byebug"
+  spec.add_development_dependency "timecop"
 
   spec.metadata["allowed_push_host"] = "https://gems.500px.net/"
 end
