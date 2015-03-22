@@ -1,7 +1,6 @@
 require 'pry'
 require 'msgpack'
 require 'aws-sdk'
-require 'yajl'
 require 'px-service-client'
 require 'circuit_breaker'
 
@@ -38,7 +37,6 @@ module Px::Service::Kinesis
       @last_send = Time.now
       @last_throughput_exceeded = nil
 
-      @jencoder = Yajl::Encoder.new
       @buffer = Array.new
     end
 
@@ -73,12 +71,12 @@ module Px::Service::Kinesis
     end
 
     ##
-    # Takes a blob of data to send to Kinesis
-    # The data will be json encoded and msgpacked
+    # Takes a blob of data to send to Kinesis.
+    # The data will be msgpacked.
     #
     def push_records(data)
 
-      data_blob = @jencoder.encode(data).to_msgpack
+      data_blob = data.to_msgpack
 
       # TODO: ensure partition key is distributed over shards
       @buffer << {data: data_blob, partition_key: Px::Service::Kinesis.config.partition_key}
@@ -93,7 +91,7 @@ module Px::Service::Kinesis
     def put_record(data)
       return unless data
 
-      data_blob = @jencoder.encode(data).to_msgpack
+      data_blob = data.to_msgpack
       r = @kinesis.put_record(:stream_name => @stream,
                                 :data => data_blob,
                                 :partion_key => Px::Service::Kinesis.config.partition_key)
