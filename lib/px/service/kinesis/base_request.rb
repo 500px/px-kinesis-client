@@ -13,7 +13,7 @@ module Px::Service::Kinesis
     DEFAULT_PUT_RATE = 0.25
     FLUSH_LENGTH = 200
 
-    attr_accessor :kinesis
+    attr_accessor :kinesis, :stream
 
     # Circuit breaker configuration
     circuit_handler do |handler|
@@ -35,7 +35,6 @@ module Px::Service::Kinesis
       # If roshi does not care out-of-order insertion. We don't have
       # to worry about out-of-order sequence numbers going to different
       # shards. the consumer can take care of that
-
       @last_send = Time.now
       @last_throughput_exceeded = nil
 
@@ -46,9 +45,9 @@ module Px::Service::Kinesis
     ##
     # Check if buffer should be flushed and sent to kinesis
     #
-    def flush_records(stream)
+    def flush_records
       if (put_rate_decay == DEFAULT_PUT_RATE && @buffer.length >= FLUSH_LENGTH) || (Time.now - @last_send > put_rate_decay)
-        response = @kinesis.put_records(:stream_name => stream, :records => @buffer)
+        response = @kinesis.put_records(:stream_name => @stream, :records => @buffer)
 
         # iterate over response and
         # back append everything that didn't send
@@ -77,7 +76,7 @@ module Px::Service::Kinesis
     # Takes a blob of data to send to Kinesis
     # The data will be json encoded and msgpacked
     #
-    def push_records(stream, data)
+    def push_records(data)
 
       data_blob = @jencoder.encode(data).to_msgpack
 
@@ -85,17 +84,17 @@ module Px::Service::Kinesis
       @buffer << {data: data_blob, partition_key: Px::Service::Kinesis.config.partition_key}
 
       # check if we should flush the buffer
-      flush_records(stream)
+      flush_records
 
       return @buffer.length
     end
 
     # push a single record to kinesis, bypass the buffer
-    def put_record(stream, data)
+    def put_record(data)
       return unless data
 
       data_blob = @jencoder.encode(data).to_msgpack
-      r = @kinesis.put_record(:stream_name => stream,
+      r = @kinesis.put_record(:stream_name => @stream,
                                 :data => data_blob,
                                 :partion_key => Px::Service::Kinesis.config.partition_key)
     end

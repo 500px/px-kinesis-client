@@ -6,16 +6,15 @@ describe Px::Service::Kinesis::BaseRequest do
     Timecop.freeze
     stub_const("Px::Service::Kinesis::BaseRequest::FLUSH_LENGTH", 5)
   end
-  subject { Px::Service::Kinesis::BaseRequest.new }
+  subject { Px::Service::Kinesis::TimelineRequest.new }
   let (:default_put_rate) { Px::Service::Kinesis::BaseRequest::DEFAULT_PUT_RATE }
   
   describe '#push_records' do
     
     context "when pushing data into buffer" do
       let(:data) { {datakey: "value"} }
-      let(:stream) { "activity" }
       before :each do
-        subject.push_records(stream, data)
+        subject.push_records(data)
       end
 
       it "returns incremented buffer count" do
@@ -25,7 +24,7 @@ describe Px::Service::Kinesis::BaseRequest do
       it "sets last send time" do
         Timecop.travel(15.seconds.from_now)
         Timecop.freeze
-        subject.flush_records(stream)
+        subject.flush_records
         expect(
           subject.instance_variable_get(:@last_send)
         ).to eq(Time.now)
@@ -46,7 +45,7 @@ describe Px::Service::Kinesis::BaseRequest do
           )
           Timecop.travel(15.seconds.from_now)
           Timecop.freeze
-          subject.flush_records(stream)
+          subject.flush_records
         end
 
         it "sets last throughput exceeded field" do
@@ -69,14 +68,14 @@ describe Px::Service::Kinesis::BaseRequest do
         it "flushes after default put rate" do
           expect{
             Timecop.travel(10.seconds.from_now) 
-            subject.flush_records(stream)
+            subject.flush_records
           }.to change{ subject.instance_variable_get(:@buffer).length }.from(1).to(0)
         end
 
         it "flushes after reaching the flush length" do
           expect {
             8.times do
-              subject.push_records(stream, data)
+              subject.push_records(data)
             end
           }.to change{ subject.instance_variable_get(:@buffer).length }.from(1).to(4)
           # started with 1, inserted 8 = 9 total, flushed 5 -> left with 4
@@ -92,7 +91,7 @@ describe Px::Service::Kinesis::BaseRequest do
           expect {
             Timecop.travel( default_put_rate.seconds.from_now )
             8.times do
-              subject.push_records(stream, data)
+              subject.push_records(data)
             end
           }.to change { subject.instance_variable_get(:@buffer).length }.from(1).to(9)
         end
@@ -100,14 +99,14 @@ describe Px::Service::Kinesis::BaseRequest do
         it "does not flush after default rate" do
           Timecop.travel( default_put_rate.seconds.from_now )
           expect {
-            subject.flush_records(stream)
+            subject.flush_records
           }.not_to change{ subject.instance_variable_get(:@buffer).length }
         end
 
         it "flushes after decayed rate" do
           Timecop.travel( subject.send(:put_rate_decay).seconds.from_now )
           expect {
-            subject.flush_records(stream)
+            subject.flush_records
           }.to change { subject.instance_variable_get(:@buffer).length }.from(1).to(0)
         end
 
