@@ -20,7 +20,7 @@ module Px::Service::Kinesis
       handler.failure_threshold = 5
       handler.failure_timeout = 7
       handler.invocation_timeout = 10
-      handler.excluded_exceptions = [Px::Service::ServiceRequestError]
+      #handler.excluded_exceptions = [Px::Service::ServiceRequestError]
     end
 
     def initialize
@@ -69,6 +69,7 @@ module Px::Service::Kinesis
         @last_send = Time.now
       end
     end
+    circuit_method :flush_records
 
     ##
     # Takes a blob of data to send to Kinesis.
@@ -88,14 +89,18 @@ module Px::Service::Kinesis
     end
 
     # push a single record to kinesis, bypass the buffer
+    #
+    # Please don't use unless necessary.
+    # Mainly used to bypass buffering when testing
     def put_record(data)
       return unless data
 
       data_blob = data.to_msgpack
-      r = @kinesis.put_record(:stream_name => @stream,
-                                :data => data_blob,
-                                :partion_key => Px::Service::Kinesis.config.partition_key)
+      @kinesis.put_record(:stream_name => @stream,
+                            :data => data_blob,
+                            :partition_key => Px::Service::Kinesis.config.partition_key)
     end
+    circuit_method :put_record
 
     private
 

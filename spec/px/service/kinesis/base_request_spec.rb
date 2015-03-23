@@ -2,17 +2,18 @@ require 'spec_helper'
 
 describe Px::Service::Kinesis::BaseRequest do
 
+  subject { Px::Service::Kinesis::BaseRequest.new }
   before(:each) do 
     Timecop.freeze
     stub_const("Px::Service::Kinesis::BaseRequest::FLUSH_LENGTH", 5)
+    subject.stream = "test"
   end
-  subject { Px::Service::Kinesis::TimelineRequest.new }
   let (:default_put_rate) { Px::Service::Kinesis::BaseRequest::DEFAULT_PUT_RATE }
+  let(:data) { {datakey: "value"} }
   
   describe '#push_records' do
     
     context "when pushing data into buffer" do
-      let(:data) { {datakey: "value"} }
       before :each do
         subject.push_records(data)
       end
@@ -109,7 +110,42 @@ describe Px::Service::Kinesis::BaseRequest do
             subject.flush_records
           }.to change { subject.instance_variable_get(:@buffer).length }.from(1).to(0)
         end
+      end
 
+
+    end
+
+  end
+
+  describe "#put_record" do
+    context "tripping circuit breaker" do
+      before :each do
+        subject.kinesis.stub_responses(
+          :put_record,
+          Seahorse::Client::NetworkingError.new(Exception.new("test error"))
+        )
+      end
+
+      it "expects request to error" do
+        expect{
+          subject.put_record(data)
+        }.to raise_error(Px::Service::ServiceError)
+      end
+
+      it "increments failure count 5 times" do
+        expect {
+          5.times do
+            subject.put_record(data) rescue nil
+          end
+        }.to change{subject.circuit_state.failure_count}.from(0).to(5)
+      end
+
+      it "trips circuit breaker after threshold" do
+        expect {
+          6.times do
+            subject.put_record(data) rescue nil
+          end
+        }.to change{subject.circuit_state.aasm.current_state}.from(:closed).to(:open)
       end
 
     end

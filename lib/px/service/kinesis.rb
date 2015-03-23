@@ -15,4 +15,3 @@ end
 
 require "px/service/kinesis/version"
 require "px/service/kinesis/base_request"
-require "px/service/kinesis/timeline_request"
