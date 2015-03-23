@@ -30,10 +30,6 @@ module Px::Service::Kinesis
       # distribution over shards.
       #
       # Current design is per machine per shard per partition key
-      #
-      # If roshi does not care out-of-order insertion. We don't have
-      # to worry about out-of-order sequence numbers going to different
-      # shards. the consumer can take care of that
       @last_send = Time.now
       @last_throughput_exceeded = nil
 
