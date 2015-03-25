@@ -4,7 +4,7 @@ A simple Ruby Gem wrapper for Amazon Kinesis.
 
 Built-in features:
 
-* circuit breaker pattern on NetworkError
+* circuit breaker pattern on networking errors
 * linear backoff on throughput error
 * timed/length buffering and bulk sending
 
@@ -26,13 +26,11 @@ And then execute:
 
 Or install it yourself as:
 
-    $ gem install px-timeline-service-client
+    $ gem install px-kinesis-client
 
 ## Usage
 
-Follow the documentation wiki here:
 
-* [Development Setup HOWTO](https://github.com/500px/500px/wiki/HOWTO:-Timeline-Service)
 
 ## Contributing
 
