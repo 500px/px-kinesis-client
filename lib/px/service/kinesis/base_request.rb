@@ -39,7 +39,7 @@ module Px::Service::Kinesis
     ##
     # Check if buffer should be flushed and sent to kinesis
     def flush_records
-      if can_flush?
+      if @buffer.present? && can_flush?
         response = @kinesis.put_records(stream_name: @stream, records: @buffer)
 
         # iterate over response and

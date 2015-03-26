@@ -28,9 +28,42 @@ Or install it yourself as:
 
     $ gem install px-kinesis-client
 
-## Usage
+## Usage and Features
+
+Extend *Px::Service::Kinesis:BaseRequest* for more fine tuning and specific
+needs. The extended class can be as simple as something below:
+
+	module SimpleKinesisClient
+	
+	  class Client < Px::Service::Kinesis::BaseRequest
+	
+	    include Singleton
+	
+	    def initialize
+	      self.stream = "simple_stream"
+	
+	      super
+	    end
+	    
+	  end
+	end
+
+### Basic Configuration
+
+Default configurations are set in *Px::Service::Kinesis*, they can be changed by
+passing block to *Px::Service::Kinesis.configure*
+
+### #queue_records
+
+Call this function to queue up data blobs for dispatching. All data are msgpacked, so your Kinesis data processor should be able to decode msgpacked data.
 
 
+### # flush_records
+
+Call this function to check and send data to Kinesis. If conditions pass, buffered data is consumed and flushed to Kinesis.
+
+
+For documentation on CircuitBreaker usage, refer to [Px-Service-Client](https://github.com/500px/px-service-client) docs.
 
 ## Contributing
 

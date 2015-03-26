@@ -139,25 +139,27 @@ describe Px::Service::Kinesis::BaseRequest do
     end
   end
 
-  describe '#put_record' do
+  describe '#flush_records' do
     context "when tripping circuit breaker" do
       before :each do
         subject.kinesis.stub_responses(
-          :put_record,
+          :put_records,
           Seahorse::Client::NetworkingError.new(Exception.new("test error"))
         )
+        subject.queue_record(data)
+        Timecop.travel(10.seconds.from_now)
       end
 
       it "expects request to error" do
         expect{
-          subject.put_record(data)
+          subject.flush_records
         }.to raise_error(Px::Service::ServiceError)
       end
 
       it "increments failure count 5 times" do
         expect {
           5.times do
-            subject.put_record(data) rescue nil
+            subject.flush_records rescue nil
           end
         }.to change{subject.circuit_state.failure_count}.from(0).to(5)
       end
@@ -165,7 +167,7 @@ describe Px::Service::Kinesis::BaseRequest do
       it "trips circuit breaker after threshold" do
         expect {
           6.times do
-            subject.put_record(data) rescue nil
+            subject.flush_records rescue nil
           end
         }.to change{subject.circuit_state.aasm.current_state}.from(:closed).to(:open)
       end
