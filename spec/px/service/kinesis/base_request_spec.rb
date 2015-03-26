@@ -2,30 +2,33 @@ require 'spec_helper'
 
 describe Px::Service::Kinesis::BaseRequest do
 
-  subject { Px::Service::Kinesis::BaseRequest.new }
-  before(:each) do 
+  subject { Px::Service::Kinesis::BaseRequest.new.tap { |s| s.stream = "test" } }
+  let (:default_put_rate) { Px::Service::Kinesis::BaseRequest::DEFAULT_PUT_RATE }
+  let (:data) { {datakey: "value"} }
+
+  before :each  do
     Timecop.freeze
     stub_const("Px::Service::Kinesis::BaseRequest::FLUSH_LENGTH", 5)
-    subject.stream = "test"
   end
-  let (:default_put_rate) { Px::Service::Kinesis::BaseRequest::DEFAULT_PUT_RATE }
-  let(:data) { {datakey: "value"} }
-  
-  describe '#push_records' do
-    
-    context "when pushing data into buffer" do
+
+  describe '#queue_record' do
+    it "returns incremented buffer count" do
+      subject.queue_record(data)
+
+      expect(subject.buffer.size).to eq(1)
+    end
+
+    context "when enough time has elapsed" do
       before :each do
-        subject.push_records(data)
-      end
+        subject
 
-      it "returns incremented buffer count" do
-        expect(subject.instance_variable_get(:@buffer).length).to eq(1)
-      end
-
-      it "sets last send time" do
         Timecop.travel(15.seconds.from_now)
         Timecop.freeze
-        subject.flush_records
+      end
+
+      it "sets the last send time" do
+        subject.queue_record(data)
+
         expect(
           subject.instance_variable_get(:@last_send)
         ).to eq(Time.now)
@@ -44,9 +47,8 @@ describe Px::Service::Kinesis::BaseRequest do
               ]
             }
           )
-          Timecop.travel(15.seconds.from_now)
-          Timecop.freeze
-          subject.flush_records
+
+          subject.queue_record(data)
         end
 
         it "sets last throughput exceeded field" do
@@ -60,65 +62,85 @@ describe Px::Service::Kinesis::BaseRequest do
         end
 
         it "pushes unsent records back on to the buffer" do
-          expect(subject.instance_variable_get(:@buffer).length).to eq(1)
+          expect(subject.buffer.size).to eq(1)
         end
       end
+    end
 
-      context "no throughput limit" do
-      
-        it "flushes after default put rate" do
-          expect{
-            Timecop.travel(10.seconds.from_now) 
-            subject.flush_records
-          }.to change{ subject.instance_variable_get(:@buffer).length }.from(1).to(0)
-        end
-
-        it "flushes after reaching the flush length" do
-          expect {
-            8.times do
-              subject.push_records(data)
-            end
-          }.to change{ subject.instance_variable_get(:@buffer).length }.from(1).to(4)
-          # started with 1, inserted 8 = 9 total, flushed 5 -> left with 4
-        end
-      end
-
-      context "with limited throughput" do
+    context "with no throughput limit" do
+      context "when enough time as elapsed" do
         before :each do
-          subject.instance_variable_set(:@last_throughput_exceeded, Time.now)
+          subject
+
+          Timecop.travel(10.seconds.from_now)
         end
 
-        it "does not flush after flush length" do
+        it "flushes" do
           expect {
-            Timecop.travel( default_put_rate.seconds.from_now )
+            subject.queue_record(data)
+          }.not_to change{ subject.buffer.size }
+        end
+      end
+
+      context "when the buffer flush size is reached" do
+        it "flushes" do
+          expect {
             8.times do
-              subject.push_records(data)
+              subject.queue_record(data)
             end
-          }.to change { subject.instance_variable_get(:@buffer).length }.from(1).to(9)
+          }.to change{ subject.buffer.size }.from(0).to(3)
+          # started with 0, inserted 8, flushed 5 -> left with 3
+        end
+      end
+    end
+
+    context "with limited throughput" do
+      before :each do
+        subject.instance_variable_set(:@last_throughput_exceeded, Time.now)
+      end
+
+      context "when buffer is full" do
+        before :each do
+          Timecop.travel( default_put_rate.seconds.from_now )
         end
 
-        it "does not flush after default rate" do
-          Timecop.travel( default_put_rate.seconds.from_now )
+        it "does not flush" do
           expect {
-            subject.flush_records
-          }.not_to change{ subject.instance_variable_get(:@buffer).length }
+            8.times do
+              subject.queue_record(data)
+            end
+          }.to change { subject.buffer.size }.from(0).to(8)
+        end
+      end
+
+      context "when flush time has elapsed" do
+        before :each do
+          Timecop.travel( default_put_rate.seconds.from_now )
+        end
+
+        it "does not flush" do
+          expect {
+            subject.queue_record(data)
+          }.to change{ subject.buffer.size }.from(0).to(1)
+        end
+      end
+
+      context "when the decay time has elapsed" do
+        before :each do
+          Timecop.travel( subject.send(:put_rate_decay).seconds.from_now )
         end
 
         it "flushes after decayed rate" do
-          Timecop.travel( subject.send(:put_rate_decay).seconds.from_now )
           expect {
-            subject.flush_records
-          }.to change { subject.instance_variable_get(:@buffer).length }.from(1).to(0)
+            subject.queue_record(data)
+          }.not_to change { subject.buffer.size }
         end
       end
-
-
     end
-
   end
 
-  describe "#put_record" do
-    context "tripping circuit breaker" do
+  describe '#put_record' do
+    context "when tripping circuit breaker" do
       before :each do
         subject.kinesis.stub_responses(
           :put_record,
