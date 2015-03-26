@@ -39,59 +39,6 @@ module Px::Service::Kinesis
     ##
     # Check if buffer should be flushed and sent to kinesis
     def flush_records
-      begin
-        _flush_records
-      rescue Px::Service::ServiceError, Px::Service::ServiceRequestError => ex
-        raise ex
-      rescue StandardError => ex
-        # Wrap other exceptions, includes CircuitBreaker::CircuitBrokenException
-        raise Px::Service::ServiceError.new(ex.message, 503), ex, ex.backtrace
-      end
-    end
-
-    ##
-    # Takes a blob of data to send to Kinesis.
-    # The data will be msgpacked and queued for send.
-    #
-    # Returns the number of unsent messages
-    def queue_record(data)
-      data_blob = data.to_msgpack
-
-      # TODO: ensure partition key is distributed over shards
-      @buffer << { data: data_blob, partition_key: Px::Service::Kinesis.config.partition_key }
-
-      # check if we should flush the buffer
-      flush_records
-
-      return @buffer.size
-    end
-
-    # push a single record to kinesis, bypass the buffer
-    #
-    # Please don't use unless necessary.
-    # Mainly used to bypass buffering when testing
-    def put_record(data)
-      begin
-        _put_record(data)
-      rescue Px::Service::ServiceError, Px::Service::ServiceRequestError => ex
-        raise ex
-      rescue StandardError => ex
-        # Wrap other exceptions, includes CircuitBreaker::CircuitBrokenException
-        raise Px::Service::ServiceError.new(ex.message, 503), ex, ex.backtrace
-      end
-    end
-
-    ##
-    # Returns true if the buffered messages can be flushed
-    def can_flush?
-      (put_rate_decay == DEFAULT_PUT_RATE && @buffer.size >= FLUSH_LENGTH) || (Time.now - @last_send > put_rate_decay)
-    end
-
-    private
-
-    ##
-    # Check if buffer should be flushed and sent to kinesis
-    def _flush_records
       if can_flush?
         response = @kinesis.put_records(stream_name: @stream, records: @buffer)
 
@@ -117,19 +64,46 @@ module Px::Service::Kinesis
         @last_send = Time.now
       end
     end
-    circuit_method :_flush_records
+    circuit_method :flush_records
 
     ##
-    # Send a single record directly to Kinesis
-    def _put_record(data)
+    # Takes a blob of data to send to Kinesis.
+    # The data will be msgpacked and queued for send.
+    #
+    # Returns the number of unsent messages
+    def queue_record(data)
+      data_blob = data.to_msgpack
+
+      # TODO: ensure partition key is distributed over shards
+      @buffer << { data: data_blob, partition_key: Px::Service::Kinesis.config.partition_key }
+
+      # check if we should flush the buffer
+      flush_records
+
+      return @buffer.size
+    end
+
+    # push a single record to kinesis, bypass the buffer
+    #
+    # Please don't use unless necessary.
+    # Mainly used to bypass buffering when testing
+    def put_record(data)
       return unless data
 
       data_blob = data.to_msgpack
-      @kinesis.put_record(:stream_name => @stream,
-                            :data => data_blob,
-                            :partition_key => Px::Service::Kinesis.config.partition_key)
+      @kinesis.put_record(stream_name: @stream,
+                          data: data_blob,
+                          partition_key: Px::Service::Kinesis.config.partition_key)
     end
-    circuit_method :_put_record
+    circuit_method :put_record
+
+    ##
+    # Returns true if the buffered messages can be flushed
+    def can_flush?
+      (put_rate_decay == DEFAULT_PUT_RATE && @buffer.size >= FLUSH_LENGTH) || (Time.now - @last_send > put_rate_decay)
+    end
+
+    private
 
     # tune this function for handling throughput exceptions
     #  decay linearly based on when last throughput failure happend
