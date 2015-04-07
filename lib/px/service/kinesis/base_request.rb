@@ -100,7 +100,7 @@ module Px::Service::Kinesis
     ##
     # Returns true if the buffered messages can be flushed
     def can_flush?
-      (put_rate_decay == DEFAULT_PUT_RATE && @buffer.size >= FLUSH_LENGTH) || (Time.now - @last_send > put_rate_decay)
+      (Time.now - @last_send).to_f > put_rate_decay || @buffer.size >= FLUSH_LENGTH
     end
 
     private
