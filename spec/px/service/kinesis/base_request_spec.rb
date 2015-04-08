@@ -11,6 +11,14 @@ describe Px::Service::Kinesis::BaseRequest do
     stub_const("Px::Service::Kinesis::BaseRequest::FLUSH_LENGTH", 5)
   end
 
+  describe '#initialize' do
+    it "sets last count to now" do
+      expect(
+        subject.instance_variable_get(:@last_send)
+      ).to eq(Time.now)
+    end
+  end
+
   describe '#queue_record' do
     it "returns incremented buffer count" do
       subject.queue_record(data)
