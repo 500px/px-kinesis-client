@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    px-kinesis-client (0.0.1)
+    px-kinesis-client (0.0.4)
       aws-sdk (~> 2.0.0)
       circuit_breaker (~> 1.1)
       msgpack
@@ -27,12 +27,8 @@ GEM
     aws-sdk-resources (2.0.30)
       aws-sdk-core (= 2.0.30)
     builder (3.2.2)
-    byebug (4.0.3)
-      columnize (= 0.9.0)
     circuit_breaker (1.1.1)
       aasm
-    coderay (1.1.0)
-    columnize (0.9.0)
     dalli (2.7.3)
     diff-lcs (1.2.5)
     ethon (0.7.3)
@@ -42,18 +38,10 @@ GEM
     jmespath (1.0.2)
       multi_json (~> 1.0)
     json (1.8.2)
-    method_source (0.8.2)
     minitest (5.5.1)
     msgpack (0.5.11)
     multi_json (1.11.0)
     multi_xml (0.5.5)
-    pry (0.10.1)
-      coderay (~> 1.1.0)
-      method_source (~> 0.8.1)
-      slop (~> 3.4)
-    pry-byebug (3.1.0)
-      byebug (~> 4.0)
-      pry (~> 0.10)
     px-service-client (1.0.1)
       activesupport
       circuit_breaker (~> 1.1)
@@ -74,7 +62,6 @@ GEM
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.2.0)
     rspec-support (3.2.2)
-    slop (3.6.0)
     thread_safe (0.3.5)
     timecop (0.7.3)
     typhoeus (0.7.1)
@@ -88,7 +75,6 @@ PLATFORMS
 
 DEPENDENCIES
   bundler (~> 1.6)
-  pry-byebug
   px-kinesis-client!
   rake
   rspec

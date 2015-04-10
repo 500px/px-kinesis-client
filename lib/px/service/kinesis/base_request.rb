@@ -1,4 +1,3 @@
-require 'pry'
 require 'msgpack'
 require 'aws-sdk'
 require 'px-service-client'
