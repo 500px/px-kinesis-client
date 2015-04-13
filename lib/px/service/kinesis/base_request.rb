@@ -10,7 +10,7 @@ module Px::Service::Kinesis
     DEFAULT_PUT_RATE = 0.25
     FLUSH_LENGTH = 200
 
-    attr_accessor :stream
+    attr_accessor :stream, :credentials
     attr_reader :kinesis, :buffer
 
     # Circuit breaker configuration
@@ -23,7 +23,7 @@ module Px::Service::Kinesis
     end
 
     def initialize
-      @kinesis = Aws::Kinesis::Client.new(region: Px::Service::Kinesis.config.region)
+      @kinesis = Aws::Kinesis::Client.new(credentials: (@credentials || Px::Service::Kinesis.config.credentials), region: Px::Service::Kinesis.config.region)
       # TODO: by default partition key can be combination
       # of hostname and other factors to ensure even
       # distribution over shards.
