@@ -39,7 +39,12 @@ module Px::Service::Kinesis
     # Check if buffer should be flushed and sent to kinesis
     def flush_records
       if @buffer.present? && can_flush?
-        response = @kinesis.put_records(stream_name: @stream, records: @buffer)
+        begin
+          response = @kinesis.put_records(stream_name: @stream, records: @buffer)
+        rescue Px::Service::ServiceError => e
+          puts "[#{DateTime.now}] raised error with input: #{@buffer} with error #{e}"
+          raise
+        end
 
         # iterate over response and
         # back append everything that didn't send
