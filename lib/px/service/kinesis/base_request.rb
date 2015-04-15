@@ -41,8 +41,8 @@ module Px::Service::Kinesis
       if @buffer.present? && can_flush?
         begin
           response = @kinesis.put_records(stream_name: @stream, records: @buffer)
-        rescue Px::Service::ServiceError => e
-          puts "[#{DateTime.now}] raised error with input: #{@buffer} with error #{e}"
+        rescue Exception => e
+          puts "[#{DateTime.now}] Raised error with input: #{@buffer} with error #{e}"
           raise
         end
 
