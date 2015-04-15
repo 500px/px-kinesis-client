@@ -38,6 +38,10 @@ module Px::Service::Kinesis
     ##
     # Check if buffer should be flushed and sent to kinesis
     def flush_records
+      # clear out nil value in buffer
+      # TODO: fix and figure out why this is happening
+      #
+      @buffer = @buffer.compact
       if @buffer.present? && can_flush?
         begin
           response = @kinesis.put_records(stream_name: @stream, records: @buffer)
