@@ -25,6 +25,8 @@ module Px::Service::Kinesis
 
     def initialize
       @kinesis = Aws::Kinesis::Client.new(credentials: (@credentials || Px::Service::Kinesis.config.credentials), region: Px::Service::Kinesis.config.region)
+      @redis = Px::Service::Kinesis.config.redis
+      @dev_queue_key = Px::Service::Kinesis.config.dev_queue_key
       # TODO: by default partition key can be combination
       # of hostname and other factors to ensure even
       # distribution over shards.
@@ -45,10 +47,10 @@ module Px::Service::Kinesis
       @buffer = @buffer.compact
       if @buffer.present? && can_flush?
 
-        if Rails.env.development?
+        if Px::Service::Kinesis.config.dev_mode && @redis && @dev_queue_key
           # push directly to redis queue if in dev
           @buffer.each do |a|
-            $redis.lpush(Px::Service::Kinesis.config.dev_queue_key, a[:data])
+            @redis.lpush(@dev_queue_key, a[:data])
           end
           @buffer = []
         else

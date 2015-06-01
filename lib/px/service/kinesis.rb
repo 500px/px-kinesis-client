@@ -7,7 +7,6 @@ module Px
       AWS_DEFAULT_REGION = "us-east-1" # http://docs.aws.amazon.com/general/latest/gr/rande.html#ak_region
       DEFAULT_SHARD_COUNT = 1
       BASE_PARTITION_KEY = Socket.gethostname
-      DEV_QUEUE_KEY = "activities_queue"
     end
   end
 end
