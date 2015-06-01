@@ -1,11 +1,12 @@
 PATH
   remote: .
   specs:
-    px-kinesis-client (0.0.4)
+    px-kinesis-client (0.0.10)
       aws-sdk (~> 2.0.0)
       circuit_breaker (~> 1.1)
       msgpack
       px-service-client (= 1.0.1)
+      redis
 
 GEM
   remote: https://rubygems.org/
@@ -49,6 +50,7 @@ GEM
       typhoeus
       will_paginate (~> 3.0)
     rake (10.4.2)
+    redis (3.2.1)
     rspec (3.2.0)
       rspec-core (~> 3.2.0)
       rspec-expectations (~> 3.2.0)

@@ -1,3 +1,4 @@
+require 'redis'
 require 'msgpack'
 require 'aws-sdk'
 require 'px-service-client'
@@ -43,32 +44,41 @@ module Px::Service::Kinesis
       #
       @buffer = @buffer.compact
       if @buffer.present? && can_flush?
-        begin
-          response = @kinesis.put_records(stream_name: @stream, records: @buffer)
-        rescue Exception => e
-          puts "[#{DateTime.now}] Raised error with input: #{@buffer} with error #{e}"
-          raise
-        end
 
-        # iterate over response and
-        # back append everything that didn't send
-        #
-        # TODO: detect which shard is being limited
-        # - decay that shard's partition_key
-        # - split shards when we really need to
-
-        tmp_buffer = []
-        if response[:failed_record_count] > 0
-          response[:records].each_with_index do |r, index|
-            if r.error_code == Aws::Kinesis::Errors::ProvisionedThroughputExceededException.code
-              # set last throughput limited value
-              @last_throughput_exceeded = Time.now
-            end
-            tmp_buffer << @buffer[index]
+        if Rails.env.development?
+          # push directly to redis queue if in dev
+          @buffer.each do |a|
+            $redis.lpush(Px::Service::Kinesis.config.dev_queue_key, a[:data])
           end
-        end
+          @buffer = []
+        else
+          begin
+            response = @kinesis.put_records(stream_name: @stream, records: @buffer)
+          rescue Exception => e
+            puts "[#{DateTime.now}] Raised error with input: #{@buffer} with error #{e}"
+            raise
+          end
 
-        @buffer = tmp_buffer
+          # iterate over response and
+          # back append everything that didn't send
+          #
+          # TODO: detect which shard is being limited
+          # - decay that shard's partition_key
+          # - split shards when we really need to
+
+          tmp_buffer = []
+          if response[:failed_record_count] > 0
+            response[:records].each_with_index do |r, index|
+              if r.error_code == Aws::Kinesis::Errors::ProvisionedThroughputExceededException.code
+                # set last throughput limited value
+                @last_throughput_exceeded = Time.now
+              end
+              tmp_buffer << @buffer[index]
+            end
+          end
+
+          @buffer = tmp_buffer
+        end
         @last_send = Time.now
       end
     end

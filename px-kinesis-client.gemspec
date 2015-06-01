@@ -21,6 +21,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "circuit_breaker", "~> 1.1"
   spec.add_dependency "aws-sdk", "~> 2.0.0"
   spec.add_dependency "msgpack"
+  spec.add_dependency "redis"
 
   spec.add_development_dependency "bundler", "~> 1.6"
   spec.add_development_dependency "rake"
