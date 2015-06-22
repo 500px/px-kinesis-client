@@ -10,6 +10,7 @@ module Px::Service::Kinesis
 
     DEFAULT_PUT_RATE = 0.25
     FLUSH_LENGTH = 200
+    MAX_QUEUE_LENGTH = 1000
 
     attr_accessor :stream, :credentials
     attr_reader :kinesis, :buffer
@@ -50,7 +51,8 @@ module Px::Service::Kinesis
         if Px::Service::Kinesis.config.dev_mode && @redis && @dev_queue_key
           # push directly to redis queue if in dev
           @buffer.each do |a|
-            @redis.lpush(@dev_queue_key, a[:data])
+            @redis.zadd(@dev_queue_key, Time.now.to_f, a[:data])
+            @redis.zremrangebyrank(@dev_queue_key, 0, -MAX_QUEUE_LENGTH - 1)
           end
           @buffer = []
         else
