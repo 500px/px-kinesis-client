@@ -50,7 +50,7 @@ module Px::Service::Kinesis
         if Px::Service::Kinesis.config.dev_mode && @redis && @dev_queue_key
           # push directly to redis queue if in dev
           @buffer.each do |a|
-            @redis.lpush(@dev_queue_key, a[:data])
+            @redis.zadd(@dev_queue_key, Time.now.to_f, a[:data])
           end
           @buffer = []
         else
