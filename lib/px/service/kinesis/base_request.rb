@@ -9,7 +9,6 @@ module Px::Service::Kinesis
     include Px::Service::Client::CircuitBreaker
 
     DEFAULT_PUT_RATE = 0.25
-    FLUSH_LENGTH = 200
     MAX_QUEUE_LENGTH = 1000
 
     attr_accessor :stream, :credentials
@@ -47,7 +46,6 @@ module Px::Service::Kinesis
       #
       @buffer = @buffer.compact
       if @buffer.present? && can_flush?
-
         if Px::Service::Kinesis.config.dev_mode && @redis && @dev_queue_key
           # push directly to redis queue if in dev
           @buffer.each do |a|
@@ -122,7 +120,7 @@ module Px::Service::Kinesis
     ##
     # Returns true if the buffered messages can be flushed
     def can_flush?
-      (Time.now - @last_send).to_f > put_rate_decay || @buffer.size >= FLUSH_LENGTH
+      (Time.now - @last_send).to_f > put_rate_decay || @buffer.size >= Px::Service::Kinesis.config.max_buffer_length
     end
 
     private
@@ -133,6 +131,5 @@ module Px::Service::Kinesis
       return DEFAULT_PUT_RATE unless @last_throughput_exceeded && (Time.now - @last_throughput_exceeded) < 10
       DEFAULT_PUT_RATE * (2 - ((Time.now - @last_throughput_exceeded) / 10))
     end
-
   end
 end
