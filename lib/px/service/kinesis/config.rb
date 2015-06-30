@@ -2,7 +2,7 @@ module Px
   module Service
     module Kinesis
       class << self
-        DefaultConfig = Struct.new(:region, :credentials, :shard_count, :partition_key, :redis, :dev_mode, :dev_queue_key, :logger) do
+        DefaultConfig = Struct.new(:region, :credentials, :shard_count, :partition_key, :redis, :dev_mode, :dev_queue_key, :logger, :max_buffer_length) do
           def initialize
             self.region = AWS_DEFAULT_REGION
             self.shard_count = DEFAULT_SHARD_COUNT
@@ -11,6 +11,9 @@ module Px
             self.dev_mode = false
             self.dev_queue_key = nil
             self.redis = nil
+
+            # Maximum length of buffer before flushing.
+            self.max_buffer_length = 200
           end
         end
 
