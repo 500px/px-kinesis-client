@@ -54,12 +54,7 @@ module Px::Service::Kinesis
           end
           @buffer = []
         else
-          begin
-            response = @kinesis.put_records(stream_name: @stream, records: @buffer)
-          rescue Exception => e
-            puts "[#{DateTime.now}] Raised error with input: #{@buffer} with error #{e}"
-            raise
-          end
+          response = @kinesis.put_records(stream_name: @stream, records: @buffer)
 
           # iterate over response and
           # back append everything that didn't send
