@@ -1,12 +1,12 @@
 require 'redis'
 require 'msgpack'
 require 'aws-sdk'
-require 'px-service-client'
+require 'px-service-legacy-client'
 require 'circuit_breaker'
 
 module Px::Service::Kinesis
   class BaseRequest
-    include Px::Service::Client::CircuitBreaker
+    include Px::Service::Legacy::Client::CircuitBreaker
 
     DEFAULT_PUT_RATE = 0.25
     MAX_QUEUE_LENGTH = 1000

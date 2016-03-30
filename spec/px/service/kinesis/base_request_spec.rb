@@ -90,14 +90,14 @@ describe Px::Service::Kinesis::BaseRequest do
         end
       end
 
-      context "when the buffer flush size is reached" do
+      context "when the buffer size reaches maximum" do
+
         it "flushes" do
           expect {
-            8.times do
+            203.times do
               subject.queue_record(data)
-            end
+              end
           }.to change{ subject.buffer.size }.from(0).to(3)
-          # started with 0, inserted 8, flushed 5 -> left with 3
         end
       end
     end
