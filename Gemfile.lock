@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    px-kinesis-client (0.0.15)
+    px-kinesis-client (0.0.16)
       aws-sdk (~> 2.0.0)
       circuit_breaker (~> 1.1)
       msgpack
