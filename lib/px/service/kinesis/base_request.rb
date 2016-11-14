@@ -66,6 +66,8 @@ module Px::Service::Kinesis
           tmp_buffer = []
           if response[:failed_record_count] > 0
             response[:records].each_with_index do |r, index|
+              next unless r.error_code
+
               if r.error_code == Aws::Kinesis::Errors::ProvisionedThroughputExceededException.code
                 # set last throughput limited value
                 @last_throughput_exceeded = Time.now
