@@ -36,6 +36,7 @@ module Px::Service::Kinesis
       @last_throughput_exceeded = nil
 
       @buffer = []
+      @semaphore = Mutex.new
     end
 
     ##
@@ -89,15 +90,17 @@ module Px::Service::Kinesis
     #
     # Returns the number of unsent messages
     def queue_record(data)
-      data_blob = data.to_msgpack
+      @semaphore.synchronize do
+        data_blob = data.to_msgpack
 
-      # TODO: ensure partition key is distributed over shards
-      @buffer << { data: data_blob, partition_key: Px::Service::Kinesis.config.partition_key }
+        # TODO: ensure partition key is distributed over shards
+        @buffer << { data: data_blob, partition_key: Px::Service::Kinesis.config.partition_key }
 
-      # check if we should flush the buffer
-      flush_records
+        # Check if we should flush the buffer.
+        flush_records
 
-      return @buffer.size
+        @buffer.size
+      end
     end
 
     # push a single record to kinesis, bypass the buffer
