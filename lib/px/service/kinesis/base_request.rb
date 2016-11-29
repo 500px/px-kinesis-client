@@ -1,3 +1,4 @@
+require "digest"
 require 'redis'
 require 'msgpack'
 require 'aws-sdk'
@@ -93,8 +94,8 @@ module Px::Service::Kinesis
       @semaphore.synchronize do
         data_blob = data.to_msgpack
 
-        # TODO: ensure partition key is distributed over shards
-        @buffer << { data: data_blob, partition_key: Px::Service::Kinesis.config.partition_key }
+        partition_key = Digest::MD5.hexdigest(data_blob)
+        @buffer << { data: data_blob, partition_key: partition_key }
 
         # Check if we should flush the buffer.
         flush_records
