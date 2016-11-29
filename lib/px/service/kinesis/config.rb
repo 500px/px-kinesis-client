@@ -25,6 +25,10 @@ module Px
         def config
           @config || configure
         end
+
+        def partition_key(data_blob)
+          Digest::MD5.hexdigest(data_blob)
+        end
       end
     end
   end

@@ -94,8 +94,7 @@ module Px::Service::Kinesis
       @semaphore.synchronize do
         data_blob = data.to_msgpack
 
-        partition_key = Digest::MD5.hexdigest(data_blob)
-        @buffer << { data: data_blob, partition_key: partition_key }
+        @buffer << { data: data_blob, partition_key: Px::Service::Kinesis.partition_key(data_blob) }
 
         # Check if we should flush the buffer.
         flush_records
@@ -114,7 +113,7 @@ module Px::Service::Kinesis
       data_blob = data.to_msgpack
       @kinesis.put_record(stream_name: @stream,
                           data: data_blob,
-                          partition_key: Px::Service::Kinesis.config.partition_key)
+                          partition_key: Px::Service::Kinesis.partition_key(data_blob))
     end
     circuit_method :put_record
 
