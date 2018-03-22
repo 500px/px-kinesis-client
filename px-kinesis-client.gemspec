@@ -17,7 +17,7 @@ Gem::Specification.new do |spec|
   spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
   spec.require_paths = ["lib"]
 
-  spec.add_dependency "px-service-legacy-client", "1.0.2"
+  spec.add_dependency "px-service-legacy-client", "1.0.3"
   spec.add_dependency "circuit_breaker", "~> 1.1"
   spec.add_dependency "aws-sdk", "~> 2.0"
   spec.add_dependency "msgpack"
