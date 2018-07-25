@@ -93,8 +93,9 @@ module Px::Service::Kinesis
     def queue_record(data)
       @semaphore.synchronize do
         data_blob = data.to_msgpack
+        partition_key = data[:partition_key] || Px::Service::Kinesis.partition_key(data_blob)
 
-        @buffer << { data: data_blob, partition_key: Px::Service::Kinesis.partition_key(data_blob) }
+        @buffer << { data: data_blob, partition_key: partition_key }
 
         # Check if we should flush the buffer.
         flush_records
