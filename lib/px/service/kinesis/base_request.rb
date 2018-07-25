@@ -90,10 +90,10 @@ module Px::Service::Kinesis
     # The data will be msgpacked and queued for send.
     #
     # Returns the number of unsent messages
-    def queue_record(data)
+    def queue_record(data, partition_key=nil)
       @semaphore.synchronize do
         data_blob = data.to_msgpack
-        partition_key = data[:partition_key] || Px::Service::Kinesis.partition_key(data_blob)
+        partition_key ||= Px::Service::Kinesis.partition_key(data_blob)
 
         @buffer << { data: data_blob, partition_key: partition_key }
 
