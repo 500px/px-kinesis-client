@@ -2,12 +2,14 @@ module Px
   module Service
     module Kinesis
       class << self
-        DefaultConfig = Struct.new(:region, :credentials, :shard_count, :redis, :dev_mode, :dev_queue_key, :logger, :max_buffer_length) do
+        DefaultConfig = Struct.new(:enabled_streams, :region, :credentials, :shard_count, :endpoint, :ssl_verify_peer, :redis, :dev_queue_key, :logger, :max_buffer_length) do
           def initialize
+            self.enabled_streams = [KINESIS_STREAM_NAME]
             self.region = AWS_DEFAULT_REGION
             self.shard_count = DEFAULT_SHARD_COUNT
             self.credentials = Aws::SharedCredentials.new
-            self.dev_mode = false
+            self.endpoint = DEFAULT_KINESIS_ENDPOINT
+            self.ssl_verify_peer = true
             self.dev_queue_key = nil
             self.redis = nil
 
