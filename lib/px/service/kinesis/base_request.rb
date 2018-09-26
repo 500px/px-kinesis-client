@@ -49,7 +49,7 @@ module Px::Service::Kinesis
     def flush_records
       # clear out nil value in buffer
       # TODO: fix and figure out why this is happening
-      #
+
       @buffer = @buffer.compact
       if @buffer.present? && can_flush?
         if Px::Service::Kinesis.config.enabled_streams.include?(REDIS_STREAM_NAME) && @redis && @dev_queue_key
@@ -60,6 +60,7 @@ module Px::Service::Kinesis
           end
         end
 
+        error_buffer = []
         if Px::Service::Kinesis.config.enabled_streams.include?(KINESIS_STREAM_NAME)
           response = @kinesis.put_records(stream_name: @stream, records: @buffer)
 
@@ -70,7 +71,6 @@ module Px::Service::Kinesis
           # - decay that shard's partition_key
           # - split shards when we really need to
 
-          tmp_buffer = []
           if response[:failed_record_count] > 0
             response[:records].each_with_index do |r, index|
               next unless r.error_code
@@ -79,14 +79,14 @@ module Px::Service::Kinesis
                 # set last throughput limited value
                 @last_throughput_exceeded = Time.now
               end
-              tmp_buffer << @buffer[index]
+              error_buffer << @buffer[index]
             end
           end
 
-          @buffer = tmp_buffer
+          # we don't really care about redis errors
+          @buffer = error_buffer
         end
 
-        @buffer = []
         @last_send = Time.now
       end
     end
