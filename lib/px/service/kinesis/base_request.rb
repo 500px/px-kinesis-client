@@ -25,7 +25,11 @@ module Px::Service::Kinesis
     end
 
     def initialize
-      @kinesis = Aws::Kinesis::Client.new(credentials: (@credentials || Px::Service::Kinesis.config.credentials), region: Px::Service::Kinesis.config.region)
+      @kinesis = Aws::Kinesis::Client.new(
+        credentials: (@credentials || Px::Service::Kinesis.config.credentials),
+        region: Px::Service::Kinesis.config.region,
+        endpoint: Px::Service::Kinesis::config.endpoint,
+        ssl_verify_peer: Px::Service::Kinesis::config.ssl_verify_peer)
       @redis = Px::Service::Kinesis.config.redis
       @dev_queue_key = Px::Service::Kinesis.config.dev_queue_key
       # TODO: by default partition key can be combination
@@ -45,17 +49,19 @@ module Px::Service::Kinesis
     def flush_records
       # clear out nil value in buffer
       # TODO: fix and figure out why this is happening
-      #
+
       @buffer = @buffer.compact
       if @buffer.present? && can_flush?
-        if Px::Service::Kinesis.config.dev_mode && @redis && @dev_queue_key
+        if Px::Service::Kinesis.config.enabled_streams.include?(REDIS_STREAM_NAME) && @redis && @dev_queue_key
           # push directly to redis queue if in dev
           @buffer.each do |a|
             @redis.zadd(@dev_queue_key, Time.now.to_f, a[:data])
             @redis.zremrangebyrank(@dev_queue_key, 0, -MAX_QUEUE_LENGTH - 1)
           end
-          @buffer = []
-        else
+        end
+
+        error_buffer = []
+        if Px::Service::Kinesis.config.enabled_streams.include?(KINESIS_STREAM_NAME)
           response = @kinesis.put_records(stream_name: @stream, records: @buffer)
 
           # iterate over response and
@@ -65,7 +71,6 @@ module Px::Service::Kinesis
           # - decay that shard's partition_key
           # - split shards when we really need to
 
-          tmp_buffer = []
           if response[:failed_record_count] > 0
             response[:records].each_with_index do |r, index|
               next unless r.error_code
@@ -74,12 +79,14 @@ module Px::Service::Kinesis
                 # set last throughput limited value
                 @last_throughput_exceeded = Time.now
               end
-              tmp_buffer << @buffer[index]
+              error_buffer << @buffer[index]
             end
           end
 
-          @buffer = tmp_buffer
+          # we don't really care about redis errors
+          @buffer = error_buffer
         end
+
         @last_send = Time.now
       end
     end
